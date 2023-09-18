@@ -1,5 +1,4 @@
 
-
 from ga.algorithm import Algorithm
 from sqlalchemy.orm import Session
 from fastapi import Depends
@@ -31,6 +30,61 @@ class MyGeneticAlgorithm(Algorithm):
         
 
     
+    def pesoUser(self):
+        user = self.query_search
+        listaNotas = RatingsRepository.find_by_userid(self.db, user)
+        
+        peso = {
+            "Action": 0,
+            "Adventure": 0,
+            "Animation": 0,
+            "Children": 0,
+            "Comedy": 0,
+            "Crime": 0,
+            "Documentary": 0,
+            "Drama": 0,
+            "Fantasy": 0,
+            "Film-Noir": 0,
+            "Horror": 0,
+            "Musical": 0,
+            "Mystery": 0,
+            "Romance": 0,
+            "Sci-Fi": 0,
+            "Thriller": 0,
+            "War": 0,
+            "Western": 0,
+            "(no genres listed)": 0
+        }
+        for nota in listaNotas:
+                filme = MovieRepository.find_by_id(self.db, nota.movieId)
+                for genero in filme.genres.split("|"):
+                    if genero in peso: 
+                        peso[genero] += nota.rating
+
+        return peso
+
+    
+    def individualevaluate(self, lista,filme, peso):
+        
+        ratings = np.array(lista.rating)
+        
+        media_ratings = np.mean(ratings)
+        generos = MovieRepository.find_by_id(self.db,filme).genres.split("|")
+        
+        soma_pesos = 0
+        
+        nota_ponderada = sum([media_ratings * peso.get(g, 0) for g in generos])
+        soma_pesos += sum([peso.get(g,0) for g in generos if g in generos])
+        
+        if soma_pesos > 0:
+            media_ponderada = nota_ponderada / soma_pesos
+        else:
+            media_ponderada = 0
+
+        return media_ponderada
+
+
+
     def evaluate(self, individual):
 
         if len(individual) != len(set(individual)):
@@ -39,10 +93,16 @@ class MyGeneticAlgorithm(Algorithm):
         if len(list(set(individual) - set(self.all_ids))) > 0:
             return (0.0, )
         
+        medias = []
+        peso = self.pesoUser()
         ratings_movies = RatingsRepository.find_by_movieid_list(self.db, individual)
+        
 
         if len(ratings_movies) > 0:
-            mean_ = np.mean([obj_.rating for obj_ in ratings_movies])
+            for nota in ratings_movies:
+                nota = self.individualevaluate(nota,nota.movieId, peso)
+                medias.append(nota)
+            mean_ = np.mean(medias)
         else:
             mean_ = 0.0
 
