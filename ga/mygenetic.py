@@ -71,17 +71,12 @@ class MyGeneticAlgorithm(Algorithm):
         media_ratings = np.mean(ratings)
         generos = MovieRepository.find_by_id(self.db,filme).genres.split("|")
         
-        soma_pesos = 0
+        age = MovieRepository.find_by_id(self.db,filme).year/1000
+        nota_ponderada = sum([age * media_ratings * peso.get(g, 0) for g in generos])
+     
         
-        nota_ponderada = sum([media_ratings * peso.get(g, 0) for g in generos])
-        soma_pesos += sum([peso.get(g,0) for g in generos if g in generos])
-        
-        if soma_pesos > 0:
-            media_ponderada = nota_ponderada / soma_pesos
-        else:
-            media_ponderada = 0
 
-        return media_ponderada
+        return nota_ponderada
 
 
 
@@ -102,7 +97,7 @@ class MyGeneticAlgorithm(Algorithm):
             for nota in ratings_movies:
                 nota = self.individualevaluate(nota,nota.movieId, peso)
                 medias.append(nota)
-            mean_ = np.mean(medias)
+            mean_ = np.mean(medias)/10
         else:
             mean_ = 0.0
 
